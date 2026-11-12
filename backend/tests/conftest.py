@@ -1,7 +1,9 @@
 import os
 
 # Must be set before app modules are imported.
-os.environ.setdefault("DATABASE_URL", "postgresql+psycopg://seo:seo@localhost:5432/seo_metadata_test")
+# Tests drop and recreate all tables, so they only ever use TEST_DATABASE_URL (never DATABASE_URL).
+os.environ["DATABASE_URL"] = os.environ.get("TEST_DATABASE_URL", "postgresql+psycopg://seo:seo@localhost:5432/seo_metadata_test")
+assert "test" in os.environ["DATABASE_URL"], "TEST_DATABASE_URL must point at a dedicated test database"
 os.environ["ALLOW_PRIVATE_NETWORKS"] = "true"  # the fixture site runs on 127.0.0.1
 os.environ["TASK_BACKEND"] = "inline"
 os.environ["ANTHROPIC_API_KEY"] = ""

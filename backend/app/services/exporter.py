@@ -60,11 +60,11 @@ def _rows_for_pages(db: Session, project_id: int) -> list[dict]:
             "Existing Meta Title": (c.title or "") if c else "",
             "Existing Title Characters": len(c.title or "") if c else 0,
             "Proposed Meta Title": mv.title if mv else "",
-            "Proposed Title Characters": len(mv.title) if mv else 0,
+            "Proposed Title Characters": len(mv.title) if mv and mv.title else "",
             "Existing Meta Description": (c.meta_description or "") if c else "",
             "Existing Description Characters": len(c.meta_description or "") if c else 0,
             "Proposed Meta Description": mv.description if mv else "",
-            "Proposed Description Characters": len(mv.description) if mv else 0,
+            "Proposed Description Characters": len(mv.description) if mv and mv.description else "",
             "Existing Title Score": ea.title_score if ea else "",
             "Existing Description Score": ea.description_score if ea else "",
             "Existing Metadata Score": ea.overall_score if ea else "",
@@ -100,6 +100,8 @@ def build_sheets(db: Session, project_id: int, export_type: str) -> list[tuple[s
         raise ValueError(f"Unknown export type '{export_type}'")
     rows = _rows_for_pages(db, project_id)
     crawled = [r for r in rows if r["page"].status == "crawled"]
+    for n, r in enumerate(crawled, 1):
+        r["S. No."] = n
 
     def table(rs, cols):
         return [[r.get(c, "") for c in cols] for r in rs]

@@ -181,3 +181,23 @@ def crawl_summary(project: Project = Depends(get_project), db: Session = Depends
                       .group_by(Page.http_status)).all()
     sources = db.execute(select(Page.source, func.count()).where(Page.project_id == project.id).group_by(Page.source)).all()
     return {"by_status": dict(rows), "by_http_status": {str(k): v for k, v in http}, "by_source": dict(sources)}
+
+
+@router.get("/results/pages")
+def crawl_pages(project: Project = Depends(get_project), db: Session = Depends(get_db), status_filter: str | None = Query(None, alias="status"),
+                q: str | None = None, limit: int = Query(100, le=1000), offset: int = 0):
+    """All discovered URLs with their crawl outcome (including failures, which are never discarded)."""
+    query = select(Page).where(Page.project_id == project.id)
+    if status_filter == "errors":
+        query = query.where((Page.status.in_(("failed", "blocked"))) | (Page.http_status >= 400))
+    elif status_filter:
+        query = query.where(Page.status == status_filter)
+    if q:
+        query = query.where(func.lower(Page.url).like(f"%{q.lower()}%"))
+    total = db.execute(select(func.count()).select_from(query.subquery())).scalar_one()
+    rows = db.execute(query.order_by(Page.id).offset(offset).limit(limit)).scalars().all()
+    return {"total": total, "items": [{
+        "id": p.id, "url": p.url, "status": p.status, "http_status": p.http_status, "error": p.error, "source": p.source,
+        "depth": p.depth, "final_url": p.final_url, "is_indexable": p.is_indexable, "indexability_reason": p.indexability_reason,
+        "rendered_with_js": p.rendered_with_js, "response_ms": p.response_ms, "attempts": p.attempts,
+    } for p in rows]}

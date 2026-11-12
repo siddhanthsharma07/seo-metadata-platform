@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment: { POSTGRES_USER: seo, POSTGRES_PASSWORD: seo, POSTGRES_DB: seo_metadata }
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U seo"], interval: 5s, retries: 10 }
+  redis:
+    image: redis:7-alpine
+  api:
+    build: ./backend
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://seo:seo@db:5432/seo_metadata
+      REDIS_URL: redis://redis:6379/0
+      TASK_BACKEND: celery
+    depends_on: { db: { condition: service_healthy }, redis: { condition: service_started } }
+    ports: ["8000:8000"]
+  worker:
+    build: ./backend
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://seo:seo@db:5432/seo_metadata
+      REDIS_URL: redis://redis:6379/0
+    command: celery -A app.worker.celery_app worker --loglevel=info --concurrency=4
+    depends_on: [api, redis]
+  web:
+    build: { context: ./frontend, args: { BACKEND_URL: "http://api:8000" } }
+    environment: { BACKEND_URL: "http://api:8000" }
+    depends_on: [api]
+    ports: ["3000:3000"]
+volumes:
+  pgdata:

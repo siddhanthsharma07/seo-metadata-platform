@@ -316,7 +316,8 @@ def apply_action(db: Session, project: Project, page: Page, user: User, body: Pa
     page.approved_at = now
     _event(db, page, user, "approve", field, mv, mv.title if field != "description" else None,
            mv.description if field != "title" else None, body.note)
-    warnings = [i for i in issues if i["severity"] in ("High", "Critical") and i not in blocking]
+    scope = {"both": ("title", "description", "both"), "title": ("title", "both"), "description": ("description", "both")}[field]
+    warnings = [i for i in issues if i["severity"] in ("High", "Critical") and i["field"] in scope and i not in blocking]
     return {"ok": True, "warnings": warnings}
 
 
