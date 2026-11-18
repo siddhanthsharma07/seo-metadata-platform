@@ -10,3 +10,5 @@ exports/
 .pgdata/
 frontend/next-env.d.ts
 *.tsbuildinfo
+*.bundle
+seo-metadata-platform-source.zip
